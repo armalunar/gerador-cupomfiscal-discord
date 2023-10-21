@@ -112,4 +112,4 @@ async def clear_tickets(ctx):
     conn.commit()
     await ctx.send("Todos os tickets foram excluídos com sucesso.")
 
-bot.run('MTE2NTQxMzg2NDk3Njk1MzQ3NQ.GPdVvw.brFT4Tdtk0pRZAzWSqFVtHDdEk2btrMoMrPcRg')
+bot.run('SEU TOKEN AQUI')
