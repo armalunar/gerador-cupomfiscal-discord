@@ -13,7 +13,7 @@ bot = commands.Bot(command_prefix='.', intents=intents)
 conn = sqlite3.connect('tickets.db')
 c = conn.cursor()
 
-c.execute('''CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY, service_name TEXT, initial_price REAL, taxes TEXT, responsible TEXT, user TEXT, notes TEXT, generated_at DATETIME)''')
+c.execute('''CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY, service_name TEXT, price REAL, taxes TEXT, total_price REAL, responsible TEXT, user TEXT, notes TEXT, generated_at DATETIME)''')
 conn.commit()
 
 ticket_info = {}
@@ -40,7 +40,7 @@ async def start_ticket(ctx):
         embed.set_field_at(0, name="Passo 2", value="Digite o preço inicial do serviço:")
         await ctx.send(embed=embed)
         msg = await bot.wait_for('message', check=check, timeout=60)
-        ticket_info['initial_price'] = float(msg.content)
+        ticket_info['price'] = float(msg.content)
 
         embed.set_field_at(0, name="Passo 3", value="Deseja adicionar taxas? (sim/não)")
         await ctx.send(embed=embed)
@@ -66,7 +66,7 @@ async def start_ticket(ctx):
         else:
             total_tax = 0.0
 
-        total_price = ticket_info['initial_price'] + total_tax
+        total_price = ticket_info['price'] + total_tax
 
         embed.set_field_at(0, name="Passo 4", value="Digite o nome do responsável:")
         await ctx.send(embed=embed)
@@ -104,7 +104,7 @@ async def generate_and_send_ticket(ctx, total_price, taxes):
 
     draw.text((10, 10), f'ID: {ticket_info["id"]}', fill='black', font=font)
     draw.text((10, 40), f'Serviço: {ticket_info["service_name"]}', fill='black', font=font)
-    draw.text((10, 70), f'Preço Inicial: ${ticket_info["initial_price"]:.2f}', fill='black', font=font)
+    draw.text((10, 70), f'Preço Inicial: ${ticket_info["price"]:.2f}', fill='black', font=font)
 
     if taxes:
         y_position = 100
@@ -123,13 +123,13 @@ async def generate_and_send_ticket(ctx, total_price, taxes):
     y_position += 30
     draw.text((10, y_position), f'Valor Total: ${total_price:.2f}', fill='black', font=font)
 
-    y_position += 100
+    y_position += 30
     draw.text((10, y_position), f'Data e Hora: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}', fill='black', font=font)
     y_position += 30
     draw.text((10, y_position), "TL STORE systems", fill='black', font=font)
 
-    c.execute("INSERT INTO tickets (id, service_name, initial_price, taxes, responsible, user, notes, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-              (ticket_info["id"], ticket_info["service_name"], ticket_info["initial_price"], str(taxes), ticket_info["responsible"], ticket_info["user"], ticket_info.get("notes", ""), datetime.now()))
+    c.execute("INSERT INTO tickets (id, service_name, price, taxes, total_price, responsible, user, notes, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              (ticket_info["id"], ticket_info["service_name"], ticket_info["price"], str(taxes), total_price, ticket_info["responsible"], ticket_info["user"], ticket_info.get("notes", ""), datetime.now()))
     conn.commit()
 
     image_buffer = io.BytesIO()
@@ -142,7 +142,7 @@ async def generate_and_send_ticket(ctx, total_price, taxes):
 
 @bot.command(name='tickets')
 async def list_tickets(ctx):
-    c.execute("SELECT id, service_name, initial_price, taxes, responsible, user, notes, generated_at FROM tickets")
+    c.execute("SELECT id, service_name, price, taxes, total_price, responsible, user, notes, generated_at FROM tickets")
     tickets = c.fetchall()
 
     if not tickets:
@@ -156,9 +156,10 @@ async def list_tickets(ctx):
                 message += "Taxas:\n"
                 for tax_name, tax_value in taxes:
                     message += f"{tax_name}: ${tax_value:.2f}\n"
-            if ticket[6]:
+            if 'notes' in ticket[6]:
                 message += f'NOTAS: {ticket[6]}\n'
-            message += f'Gerado em: {ticket[7]}\n\n'
+            message += f'Valor Total: ${ticket[4]:.2f}\n'
+            message += f'Gerado em: {ticket[8]}\n\n'
 
         await ctx.send(message)
 
